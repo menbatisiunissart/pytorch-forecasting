@@ -1,22 +1,27 @@
-from pathlib import Path
-import pickle
-import warnings
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# TO BE REMOVED ONCE FIXED BY PYTORCH:
+# 
+# The operator 'aten::index.Tensor' is not current implemented for the MPS device. 
+# If you want this op to be added in priority during the prototype phase of this feature, 
+# please comment on https://github.com/pytorch/pytorch/issues/77764. 
+# As a temporary fix, you can set the environment variable `PYTORCH_ENABLE_MPS_FALLBACK=1` 
+# to use the CPU as a fallback for this op. WARNING: this will be slower than running natively on MPS.
+# import os
+# os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
+import pickle
 import numpy as np
-import pandas as pd
-from pandas.core.common import SettingWithCopyWarning
 import pytorch_lightning as pl
+import torch
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 from pytorch_lightning.loggers import TensorBoardLogger
-import torch
 
-from pytorch_forecasting import GroupNormalizer, TemporalFusionTransformer, TimeSeriesDataSet
+from pytorch_forecasting.data import GroupNormalizer, TimeSeriesDataSet
+from pytorch_forecasting.models import TemporalFusionTransformer
 from pytorch_forecasting.data.examples import get_stallion_data
 from pytorch_forecasting.metrics import MAE, RMSE, SMAPE, PoissonLoss, QuantileLoss
 from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimize_hyperparameters
-from pytorch_forecasting.utils import profile
-
-warnings.simplefilter("error", category=SettingWithCopyWarning)
 
 
 data = get_stallion_data()
@@ -94,9 +99,17 @@ validation.save("validation.pkl")
 
 early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=10, verbose=False, mode="min")
 lr_logger = LearningRateMonitor()
-logger = TensorBoardLogger(log_graph=True)
+logger = TensorBoardLogger(log_graph=True, save_dir='./')
+
+def gpu_available():
+    if torch.cuda.is_available() or torch.backends.mps.is_available():
+        return True
+    else:
+        return False
 
 trainer = pl.Trainer(
+    # accelerator="auto",
+    # devices=1 if gpu_available() else None,
     max_epochs=100,
     gpus=0,
     gradient_clip_val=0.1,
@@ -125,29 +138,33 @@ tft = TemporalFusionTransformer.from_dataset(
 )
 print(f"Number of parameters in network: {tft.size()/1e3:.1f}k")
 
-# # find optimal learning rate
-# # remove logging and artificial epoch size
-# tft.hparams.log_interval = -1
-# tft.hparams.log_val_interval = -1
-# trainer.limit_train_batches = 1.0
-# # run learning rate finder
-# res = trainer.tuner.lr_find(
-#     tft, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader, min_lr=1e-5, max_lr=1e2
-# )
-# print(f"suggested learning rate: {res.suggestion()}")
-# fig = res.plot(show=True, suggest=True)
-# fig.show()
-# tft.hparams.learning_rate = res.suggestion()
+# find optimal learning rate
+# remove logging and artificial epoch size
+def optimal_learning_rate(model):
+    model.hparams.log_interval = -1
+    model.hparams.log_val_interval = -1
+    trainer.limit_train_batches = 1.0
+    # run learning rate finder
+    res = trainer.tuner.lr_find(
+        model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader, min_lr=1e-5, max_lr=1e2
+    )
+    print(f"suggested learning rate: {res.suggestion()}")
+    fig = res.plot(show=True, suggest=True)
+    fig.show()
+    model.hparams.learning_rate = res.suggestion()
+    return model
+# tft = optimal_learning_rate(tft)
 
-# trainer.fit(
-#     tft,
-#     train_dataloaders=train_dataloader,
-#     val_dataloaders=val_dataloader,
-# )
 
-# # make a prediction on entire validation set
-# preds, index = tft.predict(val_dataloader, return_index=True, fast_dev_run=True)
 
+trainer.fit(
+    tft,
+    train_dataloaders=train_dataloader,
+    val_dataloaders=val_dataloader,
+)
+
+# make a prediction on entire validation set
+preds, index = tft.predict(val_dataloader, return_index=True, fast_dev_run=True)
 
 # tune
 study = optimize_hyperparameters(
