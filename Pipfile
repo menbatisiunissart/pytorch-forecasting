@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pytorch-lightning = ">=1.0.0rc2"
+torch = ">=1.3.0"
+torchvision = ">=0.6.0"
+protobuf = "==3.19.4"
+pytorch-forecasting = "*"
+pyarrow = "*"
+
+[dev-packages]
+torch-tb-profiler = "*"
+
+[requires]
+python_version = "3.10"
