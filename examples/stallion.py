@@ -22,7 +22,18 @@ from pytorch_forecasting.models import TemporalFusionTransformer
 from pytorch_forecasting.data.examples import get_stallion_data
 from pytorch_forecasting.metrics import MAE, RMSE, SMAPE, PoissonLoss, QuantileLoss
 from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimize_hyperparameters
+from evaluation import evaluate
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 data = get_stallion_data()
 
@@ -155,7 +166,7 @@ def optimal_learning_rate(model):
     return model
 # tft = optimal_learning_rate(tft)
 
-
+print(f"{bcolors.WARNING}Type `tensorboard --logdir=lightning_logs` to start tensorboard{bcolors.ENDC}")
 
 trainer.fit(
     tft,
@@ -167,24 +178,24 @@ trainer.fit(
 preds, index = tft.predict(val_dataloader, return_index=True, fast_dev_run=True)
 
 # tune
-study = optimize_hyperparameters(
-    train_dataloader,
-    val_dataloader,
-    model_path="optuna_test",
-    n_trials=200,
-    max_epochs=50,
-    gradient_clip_val_range=(0.01, 1.0),
-    hidden_size_range=(8, 128),
-    hidden_continuous_size_range=(8, 128),
-    attention_head_size_range=(1, 4),
-    learning_rate_range=(0.001, 0.1),
-    dropout_range=(0.1, 0.3),
-    trainer_kwargs=dict(limit_train_batches=30),
-    reduce_on_plateau_patience=4,
-    use_learning_rate_finder=False,
-)
-with open("test_study.pkl", "wb") as fout:
-    pickle.dump(study, fout)
+# study = optimize_hyperparameters(
+#     train_dataloader,
+#     val_dataloader,
+#     model_path="optuna_test",
+#     n_trials=200,
+#     max_epochs=50,
+#     gradient_clip_val_range=(0.01, 1.0),
+#     hidden_size_range=(8, 128),
+#     hidden_continuous_size_range=(8, 128),
+#     attention_head_size_range=(1, 4),
+#     learning_rate_range=(0.001, 0.1),
+#     dropout_range=(0.1, 0.3),
+#     trainer_kwargs=dict(limit_train_batches=30),
+#     reduce_on_plateau_patience=4,
+#     use_learning_rate_finder=False,
+# )
+# with open("test_study.pkl", "wb") as fout:
+#     pickle.dump(study, fout)
 
 
 # profile speed
@@ -197,3 +208,10 @@ with open("test_study.pkl", "wb") as fout:
 #     train_dataloaders=train_dataloader,
 #     val_dataloaders=val_dataloader,
 # )
+
+# evaluate model
+evaluate(
+    trainer=trainer,
+    model=TemporalFusionTransformer,
+    test_dataloader=val_dataloader
+    )
