@@ -1,5 +1,6 @@
 # %%
 import os
+from pytorch_lightning import Trainer
 from pytorch_forecasting.metrics import SMAPE
 from pytorch_forecasting.models import TemporalFusionTransformer
 from pytorch_forecasting.data import TimeSeriesDataSet
@@ -13,6 +14,15 @@ def get_env():
     except KeyError:
         NOTEBOOK = "true"
     return NOTEBOOK
+
+def test(
+    checkpoint_path: str,
+    model: LightningModule,
+    test_dataloader: DataLoader
+):
+    trainer = Trainer()
+    best_model = model.load_from_checkpoint(checkpoint_path)
+    trainer.test(best_model, dataloaders=test_dataloader)
 
 ## Evaluate performance
 def evaluate(
@@ -88,6 +98,12 @@ def main():
     )
     # find_best_model_path
     checkpoint_path = load_best_model_path()
+    # test model
+    test(
+        checkpoint_path=checkpoint_path,
+        model=TemporalFusionTransformer,
+        test_dataloader=val_dataloader
+        )
     # evaluate model
     evaluate(
         checkpoint_path=checkpoint_path,
