@@ -1,3 +1,4 @@
+# %%
 
 from pytorch_forecasting.metrics import SMAPE
 from pytorch_forecasting.models import TemporalFusionTransformer
@@ -23,7 +24,6 @@ def evaluate(
     predictions = best_tft.predict(test_dataloader)
     (actuals - predictions).abs().mean()
 
-
     # raw predictions are a dictionary from which all kind of information including quantiles can be extracted
     raw_predictions, x = best_tft.predict(test_dataloader, mode="raw", return_x=True)
 
@@ -42,26 +42,43 @@ def evaluate(
             add_loss_to_title=SMAPE(quantiles=best_tft.loss.quantiles)
         );
 
-    print("Press Enter to close all plots and continue ...")
-    input()
+def get_file_path(
+        path: str,
+        notebook: str="evaluation.py",
+    ):
+    import os
+    notebook_path = os.path.abspath(notebook)
+    parent_folder_path = '..'
+    # NOTEBOOK = os.environ['NOTEBOOK']
+    # if NOTEBOOK and NOTEBOOK =="false":
+    #     parent_folder_path ='.'
+    file_path = os.path.join(os.path.dirname(notebook_path), parent_folder_path, path)
+    return file_path
 
 def load_best_model_path(
         log_dir: str='lightning_logs'
     ):
     import json
     json_path = log_dir+'/'+'best_model_path.json'
-    with open(json_path) as f:
+    full_json_path = get_file_path(json_path)
+    with open(full_json_path) as f:
         d = json.load(f)
         print(d)
         checkpoint_path = d.get("checkpoint_path")
-    return checkpoint_path
+    full_json_path = get_file_path(checkpoint_path)
+    return full_json_path
 
-if __name__ == '__main__':
+def main():
+    validation_path = get_file_path("examples/data/validation.pkl")
     # load datasets
-    validation = TimeSeriesDataSet.load("validation.pkl")
+    validation = TimeSeriesDataSet.load(validation_path)
     batch_size = 64
-    num_workers = 8
-    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=num_workers)
+    num_workers = 0
+    val_dataloader = validation.to_dataloader(
+        train=False,
+        batch_size=batch_size,
+        num_workers=num_workers
+    )
     # find_best_model_path
     checkpoint_path = load_best_model_path()
     # evaluate model
@@ -70,3 +87,10 @@ if __name__ == '__main__':
         model=TemporalFusionTransformer,
         test_dataloader=val_dataloader
         )
+    
+    print("Press Enter to close all plots and continue ...")
+    # input()
+
+main()
+
+# %%

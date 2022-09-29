@@ -22,7 +22,6 @@ from pytorch_forecasting.models import TemporalFusionTransformer
 from pytorch_forecasting.data.examples import get_stallion_data
 from pytorch_forecasting.metrics import MAE, RMSE, SMAPE, PoissonLoss, QuantileLoss
 from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimize_hyperparameters
-from evaluation import evaluate
 
 class bcolors:
     HEADER = '\033[95m'
@@ -105,8 +104,8 @@ val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, nu
 
 
 # save datasets
-training.save("t raining.pkl")
-validation.save("validation.pkl")
+training.save("examples/data/training.pkl")
+validation.save("examples/data/validation.pkl")
 
 early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=10, verbose=False, mode="min")
 lr_logger = LearningRateMonitor()
@@ -176,7 +175,6 @@ trainer.fit(
 
 # make a prediction on entire validation set
 preds, index = tft.predict(val_dataloader, return_index=True, fast_dev_run=True)
-
 
 def save_best_model_path(
         log_dir: str='lightning_logs'
