@@ -1,11 +1,18 @@
 # %%
-
+import os
 from pytorch_forecasting.metrics import SMAPE
 from pytorch_forecasting.models import TemporalFusionTransformer
 from pytorch_forecasting.data import TimeSeriesDataSet
 from pytorch_lightning import LightningModule
 from torch.utils.data import DataLoader
 from torch import cat
+
+def get_env():
+    try: 
+        NOTEBOOK = os.environ['NOTEBOOK']
+    except KeyError:
+        NOTEBOOK = "true"
+    return NOTEBOOK
 
 ## Evaluate performance
 def evaluate(
@@ -31,6 +38,7 @@ def evaluate(
         best_tft.plot_prediction(x, raw_predictions, idx=idx, add_loss_to_title=True);
 
     ### Worst performers
+
     # calcualte metric by which to display
     predictions = best_tft.predict(test_dataloader)
     mean_losses = SMAPE(reduction="none")(predictions, actuals).mean(1)
@@ -46,12 +54,11 @@ def get_file_path(
         path: str,
         notebook: str="evaluation.py",
     ):
-    import os
     notebook_path = os.path.abspath(notebook)
     parent_folder_path = '..'
-    # NOTEBOOK = os.environ['NOTEBOOK']
-    # if NOTEBOOK and NOTEBOOK =="false":
-    #     parent_folder_path ='.'
+    NOTEBOOK = get_env()
+    if NOTEBOOK =="false":
+        parent_folder_path ='.'
     file_path = os.path.join(os.path.dirname(notebook_path), parent_folder_path, path)
     return file_path
 
@@ -87,9 +94,13 @@ def main():
         model=TemporalFusionTransformer,
         test_dataloader=val_dataloader
         )
-    
-    print("Press Enter to close all plots and continue ...")
-    # input()
+
+    NOTEBOOK = get_env()
+    if NOTEBOOK =="false":
+        print("Add a breakpoint to see the plots")
+        print("Press Enter to close all plots and continue ...")
+        input()
+
 
 main()
 
