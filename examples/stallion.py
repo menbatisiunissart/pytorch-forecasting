@@ -177,6 +177,20 @@ trainer.fit(
 # make a prediction on entire validation set
 preds, index = tft.predict(val_dataloader, return_index=True, fast_dev_run=True)
 
+
+def save_best_model_path(
+        log_dir: str='lightning_logs'
+    ):
+    best_model_path = trainer.checkpoint_callback.best_model_path
+    print(f"{bcolors.WARNING}best_model_path: {bcolors.ENDC}", best_model_path)
+    import json
+    json_path = log_dir+'/'+'best_model_path.json'
+    data = {'checkpoint_path': best_model_path}
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+save_best_model_path()
+
 # tune
 # study = optimize_hyperparameters(
 #     train_dataloader,
@@ -208,10 +222,3 @@ preds, index = tft.predict(val_dataloader, return_index=True, fast_dev_run=True)
 #     train_dataloaders=train_dataloader,
 #     val_dataloaders=val_dataloader,
 # )
-
-# evaluate model
-evaluate(
-    trainer=trainer,
-    model=TemporalFusionTransformer,
-    test_dataloader=val_dataloader
-    )
