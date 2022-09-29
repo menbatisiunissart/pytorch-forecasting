@@ -13,6 +13,8 @@ pyarrow = "*"
 
 [dev-packages]
 torch-tb-profiler = "*"
+jupyter = "*"
+notebook = "*"
 
 [requires]
 python_version = "3.10"
